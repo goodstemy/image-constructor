@@ -1,0 +1,28 @@
+{
+  "name": "image-constructor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@babel/runtime": "^7.5.5",
+    "@babel/runtime-corejs2": "^7.5.5",
+    "koa": "^2.7.0",
+    "koa-router": "^7.4.0",
+    "koa-static": "^5.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.5.5",
+    "@babel/preset-env": "^7.5.5",
+    "babel-plugin-transform-runtime": "^6.23.0",
+    "babel-runtime": "^6.26.0",
+    "webpack": "^4.39.1",
+    "webpack-cli": "^3.3.6"
+  }
+}
