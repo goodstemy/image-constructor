@@ -8,6 +8,9 @@ window.onload = () => {
 	let isMouseDown = false;
 	let choosedImage = null;
 
+	// only for debug
+	setInterval(() => console.log(cache), 1000);
+
 	canvas.width = window.innerWidth;
 	canvas.height = window.innerHeight;
 
@@ -29,19 +32,20 @@ window.onload = () => {
 
 			img.onload = () => {
 				ctx.drawImage(img, x, y);
+
+				const {width, height} = img;
+
+				cache[filename] = {
+					img,
+					x,
+					y,
+					width,
+					height,
+					diffX: 0,
+				};
 			};
 
 			img.src = e.target.result;
-
-			const {width, height} = img;
-
-			cache[filename] = {
-				img,
-				x,
-				y,
-				width,
-				height,
-			};
 		};
 
 		reader.readAsDataURL(file);
@@ -58,8 +62,18 @@ window.onload = () => {
 
 		if (isMouseDown && dragAnyImage(e) && choosedImage) {
 			clearCanvas();
-			const {img, width, height} = choosedImage;
-			ctx.drawImage(img, layerX - width / 2, layerY - height / 2);
+
+			const {img, width, height, x, y, filename} = choosedImage;
+
+			if (!choosedImage.diffX) {
+				choosedImage.diffX = layerX - x;
+			}
+
+			ctx.drawImage(img, layerX - choosedImage.diffX, 100);
+
+			console.log(layerX, x, choosedImage.diffX);
+			cache[filename].x = layerX - choosedImage.diffX;
+			// cache[filename].y = layerY - y;
 		}
 	}
 
@@ -70,13 +84,11 @@ window.onload = () => {
 	}
 
 	function dragAnyImage({layerX, layerY}) {
-		for (const opts of Object.values(cache)) {
+		for (const [filename, opts] of Object.entries(cache)) {
 			const {x, y, width, height, img} = opts;
 
-			console.log(layerX, x);
-
 			if (layerX >= x && layerX <= x + width && layerY >= y && layerY <= y + height) {
-				choosedImage = opts;
+				choosedImage = {...opts, filename};
 				return true;
 			}
 		}
