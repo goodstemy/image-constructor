@@ -7,6 +7,8 @@ window.onload = () => {
 	const cache = {};
 	let isMouseDown = false;
 	let choosedImage = null;
+	let lastDiffX = null,
+			lastDiffY = null;
 
 	// only for debug
 	setInterval(() => console.log(cache), 1000);
@@ -28,7 +30,7 @@ window.onload = () => {
 
 		reader.onload = (e) => {
 			const img = new Image();
-			const [x, y] = [0, 0];
+			const [x, y] = [10, 0];
 
 			img.onload = () => {
 				ctx.drawImage(img, x, y);
@@ -41,7 +43,6 @@ window.onload = () => {
 					y,
 					width,
 					height,
-					diffX: 0,
 				};
 			};
 
@@ -65,21 +66,24 @@ window.onload = () => {
 
 			const {img, width, height, x, y, filename} = choosedImage;
 
-			if (!choosedImage.diffX) {
-				choosedImage.diffX = layerX - x;
+			if (lastDiffX === null && lastDiffY === null) {
+				lastDiffX = layerX - x;
+				lastDiffY = layerY - y;
 			}
 
-			ctx.drawImage(img, layerX - choosedImage.diffX, 100);
+			ctx.drawImage(img, layerX - lastDiffX, layerY - lastDiffY);
 
-			console.log(layerX, x, choosedImage.diffX);
-			cache[filename].x = layerX - choosedImage.diffX;
-			// cache[filename].y = layerY - y;
+			cache[filename].x = layerX - lastDiffX;
+			cache[filename].y = layerY - lastDiffY;
 		}
 	}
 
 	function canvasMouseUp(e) {
 		if (isMouseDown) {
 			isMouseDown = !isMouseDown;
+			lastDiffX = null;
+			lastDiffY = null;
+			choosedImage = null;
 		}
 	}
 
@@ -88,7 +92,9 @@ window.onload = () => {
 			const {x, y, width, height, img} = opts;
 
 			if (layerX >= x && layerX <= x + width && layerY >= y && layerY <= y + height) {
-				choosedImage = {...opts, filename};
+				if (!choosedImage) {
+					choosedImage = {...opts, filename};
+				}
 				return true;
 			}
 		}
@@ -98,5 +104,14 @@ window.onload = () => {
 
 	function clearCanvas() {
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		drawAllCachedImages();
+	}
+
+	function drawAllCachedImages() {
+		for (const [filename, opts] of Object.entries(cache)) {
+			const {x, y, img} = opts;
+
+			ctx.drawImage(img, x, y);
+		}
 	}
 };
