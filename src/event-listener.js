@@ -5,6 +5,18 @@ class EventListener {
 		return this._loadImage(inputImageChooser);
 	}
 
+	canvasMouseDown(e, isMouseDown) {
+		if (!isMouseDown) {
+			return !isMouseDown;
+		}
+	}
+
+	canvasMouseUp(e, isMouseDown) {
+		if (isMouseDown) {
+			return !isMouseDown;
+		}
+	}
+
 	async _loadImage(input) {
 		const reader = new FileReader();
 		const image = new Image();
@@ -23,6 +35,8 @@ class EventListener {
 			image,
 			width,
 			height,
+			x: 0,
+			y: 0,
 		}];
 	}
 
@@ -41,25 +55,6 @@ class EventListener {
 			}
 		});
 	}
-
-	// _readerOnLoad(e) {
-	// 		const img = new Image();
-	// 		const [x, y] = [10, 0];
-
-	// 		img.onload = () => {
-	// 			const {width, height} = img;
-
-	// 			return [
-	// 				filename,
-	// 				{
-						
-	// 				}
-	// 			];
-	// 		};
-
-	// 		console.log(e);
-	// 		img.src = e.target.result;
-	// }
 }
 
 module.exports = EventListener;
