@@ -1,55 +1,22 @@
 window.onload = () => {
+	const ImageConstructor = require('./image-constructor.js');
+
 	const canvas = document.querySelector('canvas');
 	const inputImageChooser = document.querySelector('#inputImageChooser');
 	const addImage = document.querySelector('#addImage');
 
-	const ctx = canvas.getContext('2d');
-	const cache = {};
-	let isMouseDown = false;
-	let choosedImage = null;
-	let lastDiffX = null,
-			lastDiffY = null;
+	const ic = new ImageConstructor(canvas);
 
-	// only for debug
-	setInterval(() => console.log(cache), 1000);
+	addImage.addEventListener('click', e => ic.dispatchAddImage(e, inputImageChooser));
+	canvas.addEventListener('mousedown', e => ic.canvasMouseDown(e));
 
-	canvas.width = window.innerWidth;
-	canvas.height = window.innerHeight;
-
-	addImage.addEventListener('click', dispatchAddImage);
-	canvas.addEventListener('mousedown', canvasMouseDown);
+/*
 	canvas.addEventListener('mousemove', canvasMouseMove);
 	canvas.addEventListener('mouseup', canvasMouseUp);
+	canvas.addEventListener('click', canvasClick);
 
 	function dispatchAddImage(e) {
-		e.preventDefault();
-
-		const reader = new FileReader();
-		const file = inputImageChooser.files[0];
-		const filename = file.name;
-
-		reader.onload = (e) => {
-			const img = new Image();
-			const [x, y] = [10, 0];
-
-			img.onload = () => {
-				ctx.drawImage(img, x, y);
-
-				const {width, height} = img;
-
-				cache[filename] = {
-					img,
-					x,
-					y,
-					width,
-					height,
-				};
-			};
-
-			img.src = e.target.result;
-		};
-
-		reader.readAsDataURL(file);
+		
 	}
 
 	function canvasMouseDown(e) {
@@ -61,7 +28,7 @@ window.onload = () => {
 	function canvasMouseMove(e) {
 		const {layerX, layerY} = e;
 
-		if (isMouseDown && dragAnyImage(e) && choosedImage) {
+		if (isMouseDown && isMouseOnImage(e) && choosedImage) {
 			clearCanvas();
 
 			const {img, width, height, x, y, filename} = choosedImage;
@@ -87,11 +54,26 @@ window.onload = () => {
 		}
 	}
 
-	function dragAnyImage({layerX, layerY}) {
+	function canvasClick(e) {
+		e.preventDefault();
+
+		// if (!choosedImage) {
+		// 	clearCanvas();
+		// 	drawAllCachedImages();
+		// 	return;
+		// }
+
+		if (isMouseOnImage(e)) {
+			addBorder();
+		}
+	}
+
+	function isMouseOnImage({layerX, layerY}) {
 		for (const [filename, opts] of Object.entries(cache)) {
 			const {x, y, width, height, img} = opts;
 
 			if (layerX >= x && layerX <= x + width && layerY >= y && layerY <= y + height) {
+				console.log('===')
 				if (!choosedImage) {
 					choosedImage = {...opts, filename};
 				}
@@ -114,4 +96,13 @@ window.onload = () => {
 			ctx.drawImage(img, x, y);
 		}
 	}
+
+	function addBorder() {
+		const {x, y, width, height} = choosedImage;
+
+		ctx.rect(10, 10, 100, 100);
+
+		ctx.rect(x - 2, y - 2, width + 2, height + 2);
+	}
+	*/
 };
