@@ -3,6 +3,7 @@ const {
 	fitCanvas,
 	clearCanvas,
 	drawAllCachedImages,
+	addBorderToImage,
 } = require('./common-modules.js');
 
 class ImageConstructor {
@@ -14,7 +15,8 @@ class ImageConstructor {
 
 		this.isMouseDown = false;
 
-		this.choosedImage = null;
+		this.activeImage = null;
+		this.draggableImage = null;
 		this.lastDiffX = null;
 		this.lastDiffY = null;
 
@@ -37,44 +39,101 @@ class ImageConstructor {
 
 	canvasMouseDown(e) {
 		this.isMouseDown = this.el.canvasMouseDown(e, this.isMouseDown);
+		this._getActiveImage(e.layerX, e.layerY);
 	}
 
 	canvasMouseUp(e) {
 		this.isMouseDown = this.el.canvasMouseUp(e, this.isMouseDown);
 
 		this._resetDiffs();
-		this._resetChoosedImage();
+		this._resetDraggableImage();
 	}
 
 	canvasMouseMove(e) {
 		const {layerX, layerY} = e;
 
-		if (this.isMouseDown && this._isMouseOnImage(e) && this.choosedImage) {
-			clearCanvas(this.ctx, this.canvas);
-			drawAllCachedImages(this.ctx, this.state);
+		if (!this.isMouseDown) {
+			return;
+		}
 
-			const {image, width, height, x, y, filename} = this.choosedImage;
+		if (!this._isMouseOnImage(e)) {
+			return;
+		}
 
-			if (this.lastDiffX === null && this.lastDiffY === null) {
-				this._setDiffs({
-					lastDiffX: layerX - x,
-					lastDiffY: layerY - y,
-				});
-			}
+		this._removeBorder();
+		this._getDraggableImage(layerX, layerY);
 
-			this._drawNewImage({
-				image, 
-				x: layerX - this.lastDiffX, 
-				y: layerY - this.lastDiffY
+		const {image, width, height, x, y, filename} = this.draggableImage;
+
+		if (this.lastDiffX === null && this.lastDiffY === null) {
+			this._setDiffs({
+				lastDiffX: layerX - x,
+				lastDiffY: layerY - y,
 			});
+		}
 
-			this.state[filename].x = layerX - this.lastDiffX;
-			this.state[filename].y = layerY - this.lastDiffY;
+		this._drawNewImage({
+			image, 
+			x: layerX - this.lastDiffX, 
+			y: layerY - this.lastDiffY
+		});
+
+		this.state[filename].x = layerX - this.lastDiffX;
+		this.state[filename].y = layerY - this.lastDiffY;
+	}
+
+	canvasClick(e) {
+		e.preventDefault();
+		
+		if (!this._isMouseOnImage(e)) {
+			this._removeBorder();
+			return;
+		}
+
+		this._getActiveImage(e.layerX, e.layerY);
+		this._switchBorders(this.activeImage.filename);
+	}
+
+	_getActiveImage(layerX, layerY) {
+		for (const [filename, opts] of Object.entries(this.state)) {
+			const {x, y, width, height, image, isActive} = opts;
+
+			if (layerX >= x && layerX <= x + width && layerY >= y && layerY <= y + height) {
+				this.activeImage = {...opts, filename};
+				this.state[filename].isActive = true;
+			}
 		}
 	}
 
-	_resetChoosedImage() {
-		this.choosedImage = null;
+	_getDraggableImage(layerX, layerY) {
+		for (const [filename, opts] of Object.entries(this.state)) {
+			const {x, y, width, height, image, isActive} = opts;
+
+			if (layerX >= x && layerX <= x + width && layerY >= y && layerY <= y + height) {
+				if (this.draggableImage && filename !== this.activeImage.filename) {
+					continue;
+				}
+
+				this.draggableImage = {...opts, filename};
+				this.state[filename].isActive = true;
+			}
+		}
+	}
+
+	_switchBorders(filename) {
+		this._removeBorder();
+
+		this.state[filename].isActive = true;
+	}
+
+	_removeBorder() {
+		for (const [filename, opts] of Object.entries(this.state)) {
+			opts.isActive = false;
+		}
+	}
+
+	_resetDraggableImage() {
+		this.draggableImage = null;
 	}
 
 	_resetDiffs() {
@@ -91,10 +150,18 @@ class ImageConstructor {
 			const {x, y, width, height, image} = opts;
 
 			if (layerX >= x && layerX <= x + width && layerY >= y && layerY <= y + height) {
-				if (!this.choosedImage) {
-					this.choosedImage = {...opts, filename};
-				}
+				return true;
+			}
+		}
 
+		return false;
+	}
+
+	_isMouseOnAnotherImage({layerX, layerY}, {filename: currentImageFilename}) {
+		for (const [filename, opts] of Object.entries(this.state)) {
+			const {x, y, width, height, image} = opts;
+
+			if (layerX >= x && layerX <= x + width && layerY >= y && layerY <= y + height && filename !== currentImageFilename) {
 				return true;
 			}
 		}
@@ -107,7 +174,7 @@ class ImageConstructor {
 	}
 
 	_addNewImageToState(filename, opts) {
-		this.state[filename] = opts;
+		this.state[filename] = {...opts, isActive: false};
 	}
 
 	_startServices() {
@@ -123,10 +190,17 @@ class ImageConstructor {
 	}
 
 	_servicesRunner() {
+		this._draw();
+
 		// TODO: Fix bug - autoclearing canvas. Implement later
 		// resizeCanvas(this.canvas);
 
 		requestAnimationFrame(this._servicesRunner.bind(this));
+	}
+
+	_draw() {
+		clearCanvas(this.ctx, this.canvas);
+		drawAllCachedImages(this.ctx, this.state);
 	}
 }
 

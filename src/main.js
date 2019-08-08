@@ -12,8 +12,5 @@ window.onload = () => {
 	canvas.addEventListener('mousedown', e => ic.canvasMouseDown(e));
 	canvas.addEventListener('mousemove', e => ic.canvasMouseMove(e));
 	canvas.addEventListener('mouseup', e => ic.canvasMouseUp(e));
-
-	// TODO: implement add border on active image
-	// canvas.addEventListener('click', e => ic.canvasClick(e));
-
+	canvas.addEventListener('click', e => ic.canvasClick(e));
 };
