@@ -1,4 +1,6 @@
 const path = require('path');
+const webpack = require('webpack');
+const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = {
 	devtool: 'source-map',
@@ -7,5 +9,25 @@ module.exports = {
     filename: 'main.js',
     path: path.resolve(__dirname, 'dist')
   },
-  target: 'web'
+  mode: 'production',
+  target: 'web',
+  optimization: {
+    minimizer: [
+    	new TerserPlugin({
+	    	terserOptions: {
+	    		beautify: false,
+	        comments: false,
+	        compress: {
+            sequences: true,
+            booleans: true,
+            loops: true,
+            unused: true,
+            warnings: false,
+            drop_console: true,
+            unsafe: true
+	        }
+	    	}
+    	})
+  	],
+  }
 };

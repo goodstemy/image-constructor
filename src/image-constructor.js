@@ -4,6 +4,10 @@ const {
 	clearCanvas,
 	drawAllCachedImages,
 	addBorderToImage,
+	addLayer,
+	getOptsOfLayer,
+	getLayerByName,
+	sortLayersByDOMLayers,
 } = require('./common-modules.js');
 
 class ImageConstructor {
@@ -13,32 +17,36 @@ class ImageConstructor {
 
 		this.state = {};
 
+		this.layers = [];
+
 		this.isMouseDown = false;
 
 		this.activeImage = null;
 		this.draggableImage = null;
 		this.lastDiffX = null;
 		this.lastDiffY = null;
+		this.layersDOM = null;
+		this.drake = null;
 
 		this._startServices();
 
 		this.el = new EventListener();
 
-		fitCanvas(this.canvas);
-
 		// only for debug
-		setInterval(() => console.log(this.state), 1000);
+		// setInterval(() => console.log(this.state), 1000);
 	}
 
 	async dispatchAddImage(e, inputImageChooser) {
 		const [filename, opts] = await this.el.dispatchAddImage(e, inputImageChooser);
 
-		this._drawNewImage(opts);
 		this._addNewImageToState(filename, opts);
+		this._addNewLayer(filename, opts);
+		this._updateDragula();
 	}
 
 	canvasMouseDown(e) {
 		this.isMouseDown = this.el.canvasMouseDown(e, this.isMouseDown);
+
 		this._getActiveImage(e.layerX, e.layerY);
 	}
 
@@ -50,8 +58,6 @@ class ImageConstructor {
 	}
 
 	canvasMouseMove(e) {
-		const {layerX, layerY} = e;
-
 		if (!this.isMouseDown) {
 			return;
 		}
@@ -59,6 +65,8 @@ class ImageConstructor {
 		if (!this._isMouseOnImage(e)) {
 			return;
 		}
+
+		const {layerX, layerY} = e;
 
 		this._removeBorder();
 		this._getDraggableImage(layerX, layerY);
@@ -94,8 +102,20 @@ class ImageConstructor {
 		this._switchBorders(this.activeImage.filename);
 	}
 
+	setLayers(layers) {
+		this.layersDOM = layers;
+	}
+
+	_addNewLayer(filename, {image}) {
+		addLayer(this.layersDOM, filename, image.src);
+
+		this.layers.push(filename);
+	}
+
 	_getActiveImage(layerX, layerY) {
-		for (const [filename, opts] of Object.entries(this.state)) {
+		for (let i = 0; i < this.layers.length; i++) {
+			const filename = this.layers[i];
+			const opts = this.state[filename];
 			const {x, y, width, height, image, isActive} = opts;
 
 			if (layerX >= x && layerX <= x + width && layerY >= y && layerY <= y + height) {
@@ -106,7 +126,9 @@ class ImageConstructor {
 	}
 
 	_getDraggableImage(layerX, layerY) {
-		for (const [filename, opts] of Object.entries(this.state)) {
+		for (let i = 0; i < this.layers.length; i++) {
+			const filename = this.layers[i];
+			const opts = this.state[filename];
 			const {x, y, width, height, image, isActive} = opts;
 
 			if (layerX >= x && layerX <= x + width && layerY >= y && layerY <= y + height) {
@@ -136,6 +158,10 @@ class ImageConstructor {
 		this.draggableImage = null;
 	}
 
+	_resetDraggableLayer() {
+		this.draggableLayer = null;
+	}
+
 	_resetDiffs() {
 		this._setDiffs({});
 	}
@@ -146,8 +172,10 @@ class ImageConstructor {
 	}
 
 	_isMouseOnImage({layerX, layerY}) {
-		for (const [filename, opts] of Object.entries(this.state)) {
-			const {x, y, width, height, image} = opts;
+		for (let i = 0; i < this.layers.length; i++) {
+			const filename = this.layers[i];
+			const opts = this.state[filename];
+			const {x, y, width, height, image, isActive} = opts;
 
 			if (layerX >= x && layerX <= x + width && layerY >= y && layerY <= y + height) {
 				return true;
@@ -177,6 +205,22 @@ class ImageConstructor {
 		this.state[filename] = {...opts, isActive: false};
 	}
 
+	_updateDragula() {
+		if (this.drake) {
+			this.drake.destroy();
+		}
+
+		this.drake = dragula([this.layersDOM], {
+			direction: 'horizontal'
+		});
+
+		this.drake.on('dragend', () => this._updateLayers());
+	}
+
+	_updateLayers() {
+		this.layers = sortLayersByDOMLayers(this.layersDOM);
+	}
+
 	_startServices() {
 		const requestAnimationFrame = 
 				 window.requestAnimationFrame 
@@ -190,17 +234,16 @@ class ImageConstructor {
 	}
 
 	_servicesRunner() {
-		this._draw();
+		fitCanvas(this.canvas);
 
-		// TODO: Fix bug - autoclearing canvas. Implement later
-		// resizeCanvas(this.canvas);
+		this._draw();
 
 		requestAnimationFrame(this._servicesRunner.bind(this));
 	}
 
 	_draw() {
 		clearCanvas(this.ctx, this.canvas);
-		drawAllCachedImages(this.ctx, this.state);
+		drawAllCachedImages(this.ctx, this.layers, this.state);
 	}
 }
 

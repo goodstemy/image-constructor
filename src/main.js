@@ -4,8 +4,11 @@ window.onload = () => {
 	const canvas = document.querySelector('canvas');
 	const inputImageChooser = document.querySelector('#inputImageChooser');
 	const addImage = document.querySelector('#addImage');
+	const layers = document.querySelector('#layers');
 
 	const ic = new ImageConstructor(canvas);
+
+	ic.setLayers(layers);
 
 	addImage.addEventListener('click', e => ic.dispatchAddImage(e, inputImageChooser));
 
