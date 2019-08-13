@@ -19,4 +19,4 @@ app.use(async ctx => {
 	console.log('middleware');
 });
 
-app.listen(3000);
+app.listen(process.env.PORT || 3000);
