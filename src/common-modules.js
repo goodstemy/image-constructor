@@ -1,6 +1,14 @@
+const {
+	SETTINGS_TITLE_TEMPLATE,
+	SETTINGS_TITLE_TEMPLATE_DEFAULT,
+} = require('./constants.js');
+
+const opacityInput = document.querySelector('#opacity-input');
+const settingsTitle = document.querySelector('#image-name-settings');
+
 module.exports = {
 	fitCanvas: canvas => {
-		canvas.width = window.innerWidth;
+		canvas.width = window.innerWidth * 80 / 100;
 		canvas.height = window.innerHeight;
 	},
 
@@ -12,9 +20,13 @@ module.exports = {
 		for (let i = 0; i < layers.length; i++) {
 			const filename = layers[i];
 			const opts = state[filename];
-			const {x, y, image, isActive, width, height} = opts;
+			const {x, y, image, isActive, width, height, opacity} = opts;
 
-			ctx.drawImage(image, x, y);
+			ctx.globalAlpha = opacity;
+
+			ctx.drawImage(image, x, y, width, height);
+
+			ctx.globalAlpha = 1;
 
 			if (isActive) {
 				module.exports.addBorderToImage(ctx, x - 2, y - 2, width + 4, height + 4);
@@ -89,4 +101,12 @@ module.exports = {
 
 		return layers;
 	},
+
+	updateOpacityRangeValue: value => typeof value !== 'undefined' ? 
+		opacityInput.value = value : 
+		opacityInput.value = 1,
+
+	updateSettingsTitle: filename => filename ?
+		settingsTitle.innerText = `${SETTINGS_TITLE_TEMPLATE} ${filename}` :
+		settingsTitle.innerText = SETTINGS_TITLE_TEMPLATE_DEFAULT,
 };

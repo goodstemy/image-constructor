@@ -8,7 +8,13 @@ const {
 	getOptsOfLayer,
 	getLayerByName,
 	sortLayersByDOMLayers,
+	updateOpacityRangeValue,
+	updateSettingsTitle,
 } = require('./common-modules.js');
+const {
+	RESIZE_FIELD_RANGE,
+	RESIZE_TYPES,
+} = require('./constants.js');
 
 class ImageConstructor {
 	constructor(canvas) {
@@ -16,6 +22,7 @@ class ImageConstructor {
 		this.ctx = this.canvas.getContext('2d');
 
 		this.state = {};
+		this.resizeState = {};
 
 		this.layers = [];
 
@@ -27,6 +34,8 @@ class ImageConstructor {
 		this.lastDiffY = null;
 		this.layersDOM = null;
 		this.drake = null;
+		this.resizeType = null;
+		this.cursor = 'default';
 
 		this._startServices();
 
@@ -39,6 +48,7 @@ class ImageConstructor {
 	async dispatchAddImage(e, inputImageChooser) {
 		const [filename, opts] = await this.el.dispatchAddImage(e, inputImageChooser);
 
+		this._updateResizeCorners(opts);
 		this._addNewImageToState(filename, opts);
 		this._addNewLayer(filename, opts);
 		this._updateDragula();
@@ -48,6 +58,8 @@ class ImageConstructor {
 		this.isMouseDown = this.el.canvasMouseDown(e, this.isMouseDown);
 
 		this._getActiveImage(e.layerX, e.layerY);
+		this._updateOpacityRange();
+		this._updateSettingsTitle();
 	}
 
 	canvasMouseUp(e) {
@@ -55,21 +67,35 @@ class ImageConstructor {
 
 		this._resetDiffs();
 		this._resetDraggableImage();
+		this._resetResizeState();
+		this._dropCursor();
 	}
 
 	canvasMouseMove(e) {
-		if (!this.isMouseDown) {
-			return;
-		}
-
 		if (!this._isMouseOnImage(e)) {
 			return;
 		}
 
 		const {layerX, layerY} = e;
 
-		this._removeBorder();
 		this._getDraggableImage(layerX, layerY);
+
+		if (!this.draggableImage) {
+			return;
+		}
+
+		if (this._isMouseNearCorners(layerX, layerY)) {
+			this._setResizeCursor();
+			this._resizeImage(layerX, layerY);
+
+			return;
+		}
+
+		this._dropCursor();
+
+		if (!this.isMouseDown) {
+			return;
+		}
 
 		const {image, width, height, x, y, filename} = this.draggableImage;
 
@@ -88,18 +114,41 @@ class ImageConstructor {
 
 		this.state[filename].x = layerX - this.lastDiffX;
 		this.state[filename].y = layerY - this.lastDiffY;
+
+		this._updateResizeCorners(this.state[filename]);
 	}
 
 	canvasClick(e) {
 		e.preventDefault();
 		
 		if (!this._isMouseOnImage(e)) {
+			this._resetActiveImage();
 			this._removeBorder();
+			this._updateSettingsTitle();
+
 			return;
 		}
 
 		this._getActiveImage(e.layerX, e.layerY);
 		this._switchBorders(this.activeImage.filename);
+		this._updateOpacityRange();
+		this._updateSettingsTitle();
+	}
+
+	changeOpacity(e) {
+		const value = this.el.getValueFromRangeInput(e);
+		const {filename} = this.activeImage;
+
+		this.state[filename].opacity = value;
+	}
+
+	exportImage(e) {
+		const image = canvas.toDataURL("image/png", 1.0);
+	  const link = document.createElement('a');
+
+	  link.download = "my-image.png";
+	  link.href = image;
+	  link.click();
 	}
 
 	setLayers(layers) {
@@ -132,7 +181,7 @@ class ImageConstructor {
 			const {x, y, width, height, image, isActive} = opts;
 
 			if (layerX >= x && layerX <= x + width && layerY >= y && layerY <= y + height) {
-				if (this.draggableImage && filename !== this.activeImage.filename) {
+				if (!this.activeImage || this.draggableImage && filename !== this.activeImage.filename) {
 					continue;
 				}
 
@@ -160,6 +209,10 @@ class ImageConstructor {
 
 	_resetDraggableLayer() {
 		this.draggableLayer = null;
+	}
+
+	_resetActiveImage() {
+		this.activeImage = null;
 	}
 
 	_resetDiffs() {
@@ -221,6 +274,135 @@ class ImageConstructor {
 		this.layers = sortLayersByDOMLayers(this.layersDOM);
 	}
 
+	_isMouseNearCorners(layerX, layerY) {
+		const {corners} = this.draggableImage;
+
+		if (
+			layerX >= corners.leftTop.x - RESIZE_FIELD_RANGE &&
+			layerY >= corners.leftTop.y - RESIZE_FIELD_RANGE &&
+			layerX <= corners.leftTop.x + RESIZE_FIELD_RANGE && 
+		 	layerY <= corners.leftTop.y + RESIZE_FIELD_RANGE) {
+				this.resizeType = RESIZE_TYPES.LEFT_TOP;
+
+				return true;
+		}
+
+		// if (
+		// 	layerX >= corners.leftBottom.x - RESIZE_FIELD_RANGE &&
+		// 	layerY >= corners.leftBottom.y - RESIZE_FIELD_RANGE &&
+		// 	layerX <= corners.leftBottom.x + RESIZE_FIELD_RANGE &&
+		// 	layerY <= corners.leftBottom.y + RESIZE_FIELD_RANGE) {
+		// 	this.resizeType = RESIZE_TYPES.LEFT_BOTTOM;
+
+		// 	return true;	
+		// }
+
+		return false;
+	}
+
+	_updateResizeCorners(opts) {
+		const {x, y, width, height} = opts;
+
+		opts.corners = {
+			leftTop: {x, y},
+			leftBottom: {x, y: y + height},
+			rightTop: {x: x + width, y},
+			rightBottom: {x: x + width, y: y + height},
+		};
+	}
+
+	_resizeImage(layerX, layerY) {
+		if (!this.isMouseDown) {
+			return;
+		}
+
+		if (!Object.keys(this.resizeState).length) {
+			this._recordResize(layerX, layerY);
+		}
+
+		this._resize(layerX, layerY);
+	}
+
+	_setResizeCursor() {
+		this.cursor = 'nwse-resize';
+	}
+
+	_updateCursor() {
+		if (document.body.style.cursor !== this.cursor) {
+			document.body.style.cursor = this.cursor;
+		}
+	}
+
+	_dropCursor() {
+		this.cursor = 'default';
+	}
+
+	_recordResize(layerX, layerY) {
+		this.resizeState.corners = this.draggableImage.corners;
+		this.resizeState.mouseX = layerX;
+		this.resizeState.mouseY = layerY;
+	}
+
+	_resize(layerX, layerY) {
+		const {filename} = this.draggableImage;
+
+		let diffX, diffY;
+
+		switch (this.resizeType) {
+			case RESIZE_TYPES.LEFT_TOP:
+				diffX = this.resizeState.mouseX - layerX;
+				diffY = this.resizeState.mouseY - layerY;
+
+				this.state[filename].x = this.state[filename].x - diffX;
+				this.state[filename].y = this.state[filename].y - diffY;
+				this.state[filename].width = this.state[filename].width + diffX;
+				this.state[filename].height = this.state[filename].height + diffY;
+
+				break;
+
+			// case RESIZE_TYPES.LEFT_BOTTOM:
+			// 	diffX = this.resizeState.mouseX - layerX;
+			// 	diffY = this.resizeState.mouseY - layerY;
+
+			// 	console.log(this.state[filename].y);
+
+			// 	this.state[filename].x = this.state[filename].x - diffX;
+			// 	this.state[filename].width = this.state[filename].width + diffX;
+			// 	this.state[filename].height = this.state[filename].height - diffY;
+
+			// 	break;
+		}
+
+		this.resizeState.mouseX = layerX;
+		this.resizeState.mouseY = layerY;
+	}
+
+	_resetResizeState() {
+		this.resizeState = {};
+		this.resizeType = null;
+	}
+
+	_updateOpacityRange() {
+		if (!this.activeImage) {
+			return updateOpacityRangeValue();
+		}
+
+		const {filename} = this.activeImage;
+		const {opacity} = this.state[filename];
+
+		updateOpacityRangeValue(opacity);
+	}
+
+	_updateSettingsTitle() {
+		if (!this.activeImage) {
+			return updateSettingsTitle();
+		}
+
+		const {filename} = this.activeImage;
+
+		updateSettingsTitle(filename);
+	}
+
 	_startServices() {
 		const requestAnimationFrame = 
 				 window.requestAnimationFrame 
@@ -237,6 +419,7 @@ class ImageConstructor {
 		fitCanvas(this.canvas);
 
 		this._draw();
+		this._updateCursor();
 
 		requestAnimationFrame(this._servicesRunner.bind(this));
 	}

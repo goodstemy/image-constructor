@@ -37,6 +37,7 @@ class EventListener {
 			height,
 			x: 0,
 			y: 0,
+			opacity: 1,
 		}];
 	}
 
@@ -54,6 +55,10 @@ class EventListener {
 				resolve(image);
 			}
 		});
+	}
+
+	getValueFromRangeInput(e) {
+		return +e.target.value;
 	}
 }
 
