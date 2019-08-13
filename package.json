@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
     "server": "nodemon server.js",
-    "wpw": "npx webpack --config webpack.config.js --watch"
+    "wpw": "npx webpack --config webpack.config.js --watch",
+    "build": "npx webpack --config webpack.config.js --production"
   },
   "keywords": [],
   "author": "",
