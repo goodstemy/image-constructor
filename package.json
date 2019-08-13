@@ -10,6 +10,7 @@
     "wpw": "npx webpack --config webpack.config.js --watch",
     "build": "npx webpack --config webpack.config.js --production"
   },
+  "heroku-run-build-script": true,
   "keywords": [],
   "author": "",
   "license": "ISC",
