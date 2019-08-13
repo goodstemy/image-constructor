@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Конструктор</title>
+	<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+	<div class="layers-wrapper" id="layers"></div>
+
+	<input id="inputImageChooser" type="file">
+	<button id="addImage">Добавить выбранное изображение</button>
+
+	<div class="wrapper">
+		<canvas id="canvas"></canvas>
+
+		<div id="settings">
+			<h3 id="image-name-settings">Слой не выбран</h3>
+			<label for="opacity">Прозрачность</label>
+			<input id="opacity-input" type="range" name="opacity" min="0" max="1" step="0.1" value="1">
+
+			<hr>
+
+			<button id="export-image">Экспорт изображения в jpg</button>
+		</div>
+	</div>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.2/dragula.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jscolor/2.0.4/jscolor.min.js"></script>
+	<script src="main.js"></script>
+</body>
+</html>

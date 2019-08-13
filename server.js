@@ -9,10 +9,11 @@ const router = new Router();
 app
 	.use(router.routes())
   .use(router.allowedMethods())
+  .use(serve(__dirname))
   .use(serve(__dirname + '/dist'));
 
 router.get('/favicon.ico', (ctx, next) => {
-	ctx.body = fs.readFileSync(__dirname + '/dist/favicon.png');
+	ctx.body = fs.readFileSync(__dirname + '/favicon.png');
 });
 
 app.use(async ctx => {
